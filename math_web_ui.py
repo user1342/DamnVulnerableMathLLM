@@ -8,7 +8,8 @@ import os
 import uuid
 import json
 import logging
-from flask import Flask, render_template_string, request, jsonify, session
+import argparse
+from flask import Flask, render_template_string, request, jsonify, session, redirect
 from mathllm import MathLLM
 
 # Initialize Flask app
@@ -17,12 +18,14 @@ app.secret_key = os.environ.get("SECRET_KEY", "math-secret-key-change-this")
 
 
 # Initialize the MathLLM
-def create_math_llm():
+def create_math_llm(base_url=None, api_key=None, model=None):
     """Create and configure the MathLLM"""
     try:
-        base_url = os.environ.get("OPENAI_BASE_URL", "http://localhost:11434/v1")
-        api_key = os.environ.get("OPENAI_API_KEY", "ollama")
-        model = os.environ.get("OPENAI_MODEL", "llama3.1")
+        base_url = base_url or os.environ.get(
+            "OPENAI_BASE_URL", "http://localhost:11434/v1"
+        )
+        api_key = api_key or os.environ.get("OPENAI_API_KEY", "ollama")
+        model = model or os.environ.get("OPENAI_MODEL", "llama3.1")
 
         # Create MathLLM instance
         math_llm = MathLLM(
@@ -36,8 +39,8 @@ def create_math_llm():
         raise
 
 
-# Global MathLLM instance
-math_llm = create_math_llm()
+# Global MathLLM instance (will be initialized in main)
+math_llm = None
 
 
 def generate_session_id():
@@ -605,18 +608,58 @@ def reset_session():
 
 
 if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="MathLLM Web UI")
+    parser.add_argument(
+        "--api-endpoint",
+        type=str,
+        default="http://localhost:11434/v1",
+        help="API endpoint URL (default: http://localhost:11434/v1)",
+    )
+    parser.add_argument(
+        "--api-key",
+        type=str,
+        default="ollama",
+        help="API key for the LLM service (default: ollama)",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="llama3.1",
+        help="Model name to use (default: llama3.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5001,
+        help="Port to run the web server on (default: 5001)",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Host to run the web server on (default: 0.0.0.0)",
+    )
+
+    args = parser.parse_args()
+
+    # Initialize the MathLLM with command line parameters
+    math_llm = create_math_llm(args.api_endpoint, args.api_key, args.model)
+
     # Configure logging for production
     logging.basicConfig(level=logging.WARNING)
 
     print("Starting MathLLM Web UI...")
-    print("Make sure you have:")
-    print("1. An LLM server running (e.g., Ollama at localhost:11434)")
+    print("Configuration:")
+    print(f"  API Endpoint: {args.api_endpoint}")
+    print(f"  API Key: {args.api_key}")
+    print(f"  Model: {args.model}")
+    print(f"  Host: {args.host}")
+    print(f"  Port: {args.port}")
+    print("\nMake sure you have:")
+    print("1. An LLM server running")
     print("2. Docker available for PyDocker execution")
-    print("3. Set environment variables if needed:")
-    print("   - OPENAI_BASE_URL (default: http://localhost:11434/v1)")
-    print("   - OPENAI_API_KEY (default: ollama)")
-    print("   - OPENAI_MODEL (default: llama3.1)")
-    print("4. Flask and required dependencies installed")
-    print("\nStarting server at http://localhost:5001")
+    print("3. Flask and required dependencies installed")
+    print(f"\nStarting server at http://{args.host}:{args.port}")
 
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(debug=True, host=args.host, port=args.port)

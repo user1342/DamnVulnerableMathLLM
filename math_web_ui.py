@@ -644,7 +644,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize the MathLLM with command line parameters
-    math_llm = create_math_llm(args.api_endpoint, args.api_key, args.model)
+    temp_math_llm = create_math_llm(args.api_endpoint, args.api_key, args.model)
+    
+    # Update global variable
+    globals()['math_llm'] = temp_math_llm
 
     # Configure logging for production
     logging.basicConfig(level=logging.WARNING)

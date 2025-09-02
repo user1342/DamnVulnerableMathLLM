@@ -414,9 +414,6 @@ HTML_TEMPLATE = """
                     
                     <div class="examples">
                         <h3>Example Problems:</h3>
-                        <div class="example-item" onclick="fillExample('Solve the quadratic equation x² - 5x + 6 = 0')">
-                            Solve the quadratic equation x² - 5x + 6 = 0
-                        </div>
                         <div class="example-item" onclick="fillExample('Calculate the integral of x² from 0 to 3')">
                             Calculate the integral of x² from 0 to 3
                         </div>
@@ -645,9 +642,9 @@ if __name__ == "__main__":
 
     # Initialize the MathLLM with command line parameters
     temp_math_llm = create_math_llm(args.api_endpoint, args.api_key, args.model)
-    
+
     # Update global variable
-    globals()['math_llm'] = temp_math_llm
+    globals()["math_llm"] = temp_math_llm
 
     # Configure logging for production
     logging.basicConfig(level=logging.WARNING)

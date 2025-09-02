@@ -55,7 +55,7 @@ class MathLLM:
             f"Problem: {math_problem}"
         )
         self._log("Requesting LLM to generate Python code...")
-        return self._openai_generate(prompt, max_tokens=512)
+        return self._openai_generate(prompt, max_tokens=512, extract_code=True)
 
     def _execute_code(self, code: str):
         """Execute the generated code in a Docker container"""
@@ -86,9 +86,9 @@ class MathLLM:
             "You are a helpful assistant. Given the output from a Python script that solves a math problem, extract and return only the final answer.\n"
             f"Output:\n{stdout}"
         )
-        return self._openai_generate(extract_prompt, max_tokens=64)
+        return self._openai_generate(extract_prompt, max_tokens=64, extract_code=False)
 
-    def _openai_generate(self, prompt, max_tokens=512):
+    def _openai_generate(self, prompt, max_tokens=512, extract_code=True):
         try:
 
             response = self.client.chat.completions.create(
@@ -102,13 +102,19 @@ class MathLLM:
             )
             text = response.choices[0].message.content
             self._log(f"LLM completion response: {text}")
-            if "```python" in text:
-                code = text.split("```python")[1].split("```")[0]
-            elif "```" in text:
-                code = text.split("```")[1].split("```")[0]
+            
+            # Only extract code if we're generating code, not extracting solutions
+            if extract_code:
+                if "```python" in text:
+                    code = text.split("```python")[1].split("```")[0]
+                elif "```" in text:
+                    code = text.split("```")[1].split("```")[0]
+                else:
+                    code = text
+                return code.strip()
             else:
-                code = text
-            return code.strip()
+                # For solution extraction, return the text as-is
+                return text.strip()
         except Exception as e:
             self._log(f"Error in LLM completion: {e}")
             return None

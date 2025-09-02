@@ -1,0 +1,1 @@
+A purposley vulnerable LLM tool. Ask the LLM complex math questions, it will generate Python code to solve the problem, run it, and reason on the response to return to you the answere. Modify the LLM endpoint and API key in ```math_web_ui.py``` and run. 

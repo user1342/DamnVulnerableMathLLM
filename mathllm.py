@@ -89,13 +89,11 @@ class MathLLM:
         """Extract the final solution from the code execution output"""
         self._log("Requesting LLM to extract solution from output...")
         extract_prompt = (
-            "Extract the final numerical answer from this output. Respond with ONLY the number.\n\n"
-            f"Output: {stdout}\n\n"
-            "Answer: "
+            f"What is the final answer? {stdout}"
         )
 
         llm_solution = self._openai_generate(
-            extract_prompt, max_tokens=10, extract_code=False
+            extract_prompt, max_tokens=50, extract_code=False
         )
 
         self._log(f"LLM extracted solution: {llm_solution}")
@@ -114,8 +112,8 @@ class MathLLM:
                 system_msg = "You are a helpful math assistant. Always provide complete, working Python code."
                 temp = 0.1
             else:
-                system_msg = "You are a math assistant. Extract numbers from text. Always respond with at least one character."
-                temp = 0.3
+                system_msg = "You are a helpful assistant."
+                temp = 0.7
 
             response = self.client.chat.completions.create(
                 model=self.model_name,

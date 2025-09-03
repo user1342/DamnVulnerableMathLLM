@@ -88,12 +88,14 @@ class MathLLM:
     def _extract_solution(self, stdout: str):
         """Extract the final solution from the code execution output"""
         self._log("Requesting LLM to extract solution from output...")
-        extract_prompt = (
-            f"What is the final answer? {stdout}"
-        )
+        
+        # Truncate output if too long to avoid context window issues
+        truncated_output = stdout[:1000] if len(stdout) > 1000 else stdout
+        
+        extract_prompt = f"Answer: {truncated_output[-200:]}"  # Only last 200 chars
 
         llm_solution = self._openai_generate(
-            extract_prompt, max_tokens=50, extract_code=False
+            extract_prompt, max_tokens=20, extract_code=False
         )
 
         self._log(f"LLM extracted solution: {llm_solution}")
@@ -106,15 +108,17 @@ class MathLLM:
             self._log(
                 f"Sending prompt to LLM (max_tokens={max_tokens}, extract_code={extract_code})"
             )
-
+            self._log(f"Prompt length: {len(prompt)} characters")
+            
             # Use different system message based on task
             if extract_code:
                 system_msg = "You are a helpful math assistant. Always provide complete, working Python code."
                 temp = 0.1
             else:
-                system_msg = "You are a helpful assistant."
-                temp = 0.7
+                system_msg = "Answer briefly."
+                temp = 0.9
 
+            self._log(f"Making API call to model: {self.model_name}")
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
@@ -124,8 +128,10 @@ class MathLLM:
                 max_tokens=max_tokens,
                 temperature=temp,
             )
+            
+            self._log(f"API response received. Choices count: {len(response.choices)}")
             text = response.choices[0].message.content
-            self._log(f"LLM completion response: '{text}'")
+            self._log(f"LLM completion response: '{text}' (length: {len(text) if text else 0})")
 
             # Check if response is None or empty
             if not text or not text.strip():

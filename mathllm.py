@@ -89,16 +89,13 @@ class MathLLM:
         """Extract the final solution from the code execution output"""
         self._log("Requesting LLM to extract solution from output...")
         extract_prompt = (
-            "Look at this math calculation output and find the final answer. "
-            "You MUST respond with just the numerical result or answer. "
-            "Examples: '9', '3.14159', 'x = 5', '42'. "
-            "Do not include any other text, explanations, or formatting.\n\n"
-            f"Output:\n{stdout}\n\n"
-            "Final answer:"
+            "Extract the final numerical answer from this output. Respond with ONLY the number.\n\n"
+            f"Output: {stdout}\n\n"
+            "Answer: "
         )
 
         llm_solution = self._openai_generate(
-            extract_prompt, max_tokens=20, extract_code=False
+            extract_prompt, max_tokens=10, extract_code=False
         )
 
         self._log(f"LLM extracted solution: {llm_solution}")
@@ -115,8 +112,10 @@ class MathLLM:
             # Use different system message based on task
             if extract_code:
                 system_msg = "You are a helpful math assistant. Always provide complete, working Python code."
+                temp = 0.1
             else:
-                system_msg = "You are a helpful math assistant. Always provide a direct, concise answer when asked to extract results."
+                system_msg = "You are a math assistant. Extract numbers from text. Always respond with at least one character."
+                temp = 0.3
 
             response = self.client.chat.completions.create(
                 model=self.model_name,
@@ -125,7 +124,7 @@ class MathLLM:
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=max_tokens,
-                temperature=0.1,
+                temperature=temp,
             )
             text = response.choices[0].message.content
             self._log(f"LLM completion response: '{text}'")

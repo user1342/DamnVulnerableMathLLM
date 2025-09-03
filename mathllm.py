@@ -89,14 +89,14 @@ class MathLLM:
         """Extract the final solution from the code execution output"""
         self._log("Requesting LLM to extract solution from output...")
         extract_prompt = (
-            "Extract and summarize the final answer from this math calculation output. "
-            "Provide a clear, comprehensive explanation of the solution including key steps and the final result.\n"
+            "Extract ONLY the final numerical answer from this math calculation output. "
+            "Return just the number or short answer, nothing else. No explanation, no formatting, just the result.\n"
             f"Output:\n{stdout}"
         )
 
         # Try LLM extraction first
         llm_solution = self._openai_generate(
-            extract_prompt, max_tokens=512, extract_code=False
+            extract_prompt, max_tokens=50, extract_code=False
         )
 
         self._log(f"LLM extracted solution: {llm_solution}")

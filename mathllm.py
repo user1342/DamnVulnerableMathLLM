@@ -89,14 +89,16 @@ class MathLLM:
         """Extract the final solution from the code execution output"""
         self._log("Requesting LLM to extract solution from output...")
         extract_prompt = (
-            "Extract ONLY the final numerical answer from this math calculation output. "
-            "Return just the number or short answer, nothing else. No explanation, no formatting, just the result.\n"
-            f"Output:\n{stdout}"
+            "Look at this math calculation output and find the final answer. "
+            "You MUST respond with just the numerical result or answer. "
+            "Examples: '9', '3.14159', 'x = 5', '42'. "
+            "Do not include any other text, explanations, or formatting.\n\n"
+            f"Output:\n{stdout}\n\n"
+            "Final answer:"
         )
 
-        # Try LLM extraction first
         llm_solution = self._openai_generate(
-            extract_prompt, max_tokens=50, extract_code=False
+            extract_prompt, max_tokens=20, extract_code=False
         )
 
         self._log(f"LLM extracted solution: {llm_solution}")
@@ -110,14 +112,20 @@ class MathLLM:
                 f"Sending prompt to LLM (max_tokens={max_tokens}, extract_code={extract_code})"
             )
 
+            # Use different system message based on task
+            if extract_code:
+                system_msg = "You are a helpful math assistant. Always provide complete, working Python code."
+            else:
+                system_msg = "You are a helpful math assistant. Always provide a direct, concise answer when asked to extract results."
+
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a helpful math assistant."},
+                    {"role": "system", "content": system_msg},
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=max_tokens,
-                temperature=0.2,
+                temperature=0.1,
             )
             text = response.choices[0].message.content
             self._log(f"LLM completion response: '{text}'")
@@ -125,7 +133,7 @@ class MathLLM:
             # Check if response is None or empty
             if not text or not text.strip():
                 self._log("Warning: LLM returned empty response")
-                return None
+                return "Error: No response from LLM"
 
             # Only extract code if we're generating code, not extracting solutions
             if extract_code:
@@ -141,4 +149,4 @@ class MathLLM:
                 return text.strip()
         except Exception as e:
             self._log(f"Error in LLM completion: {e}")
-            return None
+            return f"Error: {str(e)}"

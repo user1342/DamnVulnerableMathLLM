@@ -15,10 +15,10 @@ class MathLLM:
         self.base_url = base_url or ip.rstrip("/")
 
         install_cmd = (
-                "pip install numpy scipy sympy pandas matplotlib scikit-learn "
-                "mpmath numba cython "
-                "pymc seaborn sagemath"
-            )
+            "pip install numpy scipy sympy pandas matplotlib scikit-learn "
+            "mpmath numba cython "
+            "pymc seaborn sagemath"
+        )
 
         self.pydocker = PyDocker(install_cmd=install_cmd)
         self._log(
@@ -50,12 +50,15 @@ class MathLLM:
     def _generate_code(self, math_problem: str):
         """Generate Python code to solve the math problem"""
         prompt = (
-            "You are a helpful math assistant. Given a math problem, you write a Python script that shows step-by-step workings and solves it. Print all steps and the final answer. Only provide the raw Python, nothing else!\n"
+            "You are a helpful math assistant. Given a math problem, you write a comprehensive Python script that shows detailed step-by-step workings and solves it. "
+            "Include explanatory print statements for each step, intermediate calculations, and clear formatting. "
+            "Show your work thoroughly with comments and detailed output. Print all steps and the final answer. "
+            "Only provide the raw Python code, nothing else!\n"
             "You can use the following non-default python modules if needed (but no others): numpy scipy sympy pandas matplotlib scikit-learn mpmath numba cython pymc seaborn sagemath\n"
             f"Problem: {math_problem}"
         )
         self._log("Requesting LLM to generate Python code...")
-        return self._openai_generate(prompt, max_tokens=512, extract_code=True)
+        return self._openai_generate(prompt, max_tokens=2048, extract_code=True)
 
     def _execute_code(self, code: str):
         """Execute the generated code in a Docker container"""
@@ -67,7 +70,10 @@ class MathLLM:
 
         self._log(f"Running code in PyDocker container: {file_name}")
         try:
-            files = [{"filename": file_name, "file_data": code, "execute": "python"}, {"filename":"flag.txt","file_data":r"flag(654e321456tygfw)"}]
+            files = [
+                {"filename": file_name, "file_data": code, "execute": "python"},
+                {"filename": "flag.txt", "file_data": r"flag(654e321456tygfw)"},
+            ]
             stdout = self.pydocker.run_container(files, timeout=600)
             self._log(f"Container execution complete. Output:\n{stdout}")
             return stdout
@@ -83,13 +89,26 @@ class MathLLM:
         """Extract the final solution from the code execution output"""
         self._log("Requesting LLM to extract solution from output...")
         extract_prompt = (
-            "You are a helpful assistant. Given the output from a Python script that solves a math problem, extract and return only the final answer.\n"
+            "Extract and summarize the final answer from this math calculation output. "
+            "Provide a clear, comprehensive explanation of the solution including key steps and the final result.\n"
             f"Output:\n{stdout}"
         )
-        return self._openai_generate(extract_prompt, max_tokens=64, extract_code=False)
 
-    def _openai_generate(self, prompt, max_tokens=512, extract_code=True):
+        # Try LLM extraction first
+        llm_solution = self._openai_generate(
+            extract_prompt, max_tokens=512, extract_code=False
+        )
+
+        self._log(f"LLM extracted solution: {llm_solution}")
+        return llm_solution
+
+
+
+    def _openai_generate(self, prompt, max_tokens=1024, extract_code=True):
         try:
+            self._log(
+                f"Sending prompt to LLM (max_tokens={max_tokens}, extract_code={extract_code})"
+            )
 
             response = self.client.chat.completions.create(
                 model=self.model_name,
@@ -101,8 +120,13 @@ class MathLLM:
                 temperature=0.2,
             )
             text = response.choices[0].message.content
-            self._log(f"LLM completion response: {text}")
-            
+            self._log(f"LLM completion response: '{text}'")
+
+            # Check if response is None or empty
+            if not text or not text.strip():
+                self._log("Warning: LLM returned empty response")
+                return None
+
             # Only extract code if we're generating code, not extracting solutions
             if extract_code:
                 if "```python" in text:

@@ -95,7 +95,7 @@ class MathLLM:
         extract_prompt = f"Answer: {truncated_output[-200:]}"  # Only last 200 chars
 
         llm_solution = self._openai_generate(
-            extract_prompt, max_tokens=20, extract_code=False
+            extract_prompt, max_tokens=200, extract_code=False
         )
 
         self._log(f"LLM extracted solution: {llm_solution}")
@@ -153,3 +153,4 @@ class MathLLM:
         except Exception as e:
             self._log(f"Error in LLM completion: {e}")
             return f"Error: {str(e)}"
+
